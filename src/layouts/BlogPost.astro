@@ -1,0 +1,145 @@
+---
+import { Image } from 'astro:assets';
+import { getEntry } from 'astro:content';
+import AuthorCard from '../components/AuthorCard.astro';
+import Comments from '../components/Comments.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import { CATEGORIES } from '../consts';
+import { readingMinutes, tagSlug, type Post } from '../lib/posts';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+	post: Post;
+}
+const { post } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, category, tags } = post.data;
+const author = await getEntry(post.data.author);
+const minutes = readingMinutes(post.body);
+---
+
+<BaseLayout title={title} description={description} image={heroImage} type="article">
+	<article class="wrap post">
+		<header class="post-head">
+			<a class="category" href={`/category/${category}/`}>{CATEGORIES[category].label}</a>
+			<h1>{title}</h1>
+			<p class="lead">{description}</p>
+			<p class="meta">
+				{author && <a href={`/authors/${author.id}/`}>{author.data.name}</a>}
+				<FormattedDate date={pubDate} />
+				<span>{minutes}분 분량</span>
+			</p>
+			{
+				updatedDate && (
+					<p class="updated">
+						<FormattedDate date={updatedDate} />에 수정됨
+					</p>
+				)
+			}
+		</header>
+
+		{
+			heroImage && (
+				<div class="hero">
+					<Image width={1080} height={540} src={heroImage} alt="" />
+				</div>
+			)
+		}
+
+		<div class="prose">
+			<slot />
+		</div>
+
+		<footer class="post-foot">
+			{
+				tags.length > 0 && (
+					<ul class="tags" aria-label="태그">
+						{tags.map((t) => (
+							<li>
+								<a href={`/tags/${tagSlug(t)}/`}>#{t}</a>
+							</li>
+						))}
+					</ul>
+				)
+			}
+			{author && <AuthorCard author={author} />}
+			<Comments />
+		</footer>
+	</article>
+</BaseLayout>
+
+<style>
+	.post {
+		max-width: var(--measure);
+		padding-top: 4rem;
+	}
+	.post-head {
+		margin-bottom: 3rem;
+	}
+	.category {
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: var(--brand);
+		text-decoration: none;
+	}
+	h1 {
+		margin-top: 0.6rem;
+		font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+		line-height: 1.25;
+		letter-spacing: -0.03em;
+	}
+	.lead {
+		margin: 1rem 0 0;
+		font-size: 1.1rem;
+		color: var(--muted);
+	}
+	.meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		margin: 1.75rem 0 0;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--line);
+		font-size: 0.9rem;
+		color: var(--muted);
+	}
+	.meta a {
+		color: var(--ink);
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.updated {
+		margin: 0.4rem 0 0;
+		font-size: 0.85rem;
+		color: var(--muted);
+	}
+	.hero {
+		margin-bottom: 3rem;
+	}
+	.hero :global(img) {
+		border-radius: 10px;
+	}
+	.post-foot {
+		margin-top: 4rem;
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		list-style: none;
+		margin: 0 0 2rem;
+		padding: 0;
+	}
+	.tags a {
+		display: inline-block;
+		padding: 0.25rem 0.7rem;
+		border-radius: 999px;
+		background: var(--surface-alt);
+		font-size: 0.875rem;
+		color: var(--ink-soft);
+		text-decoration: none;
+	}
+	.tags a:hover {
+		background: var(--brand-soft);
+		color: var(--brand);
+	}
+</style>

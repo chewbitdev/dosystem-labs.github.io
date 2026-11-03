@@ -1,0 +1,22 @@
+---
+import ListHeader from '../../components/ListHeader.astro';
+import PostList from '../../components/PostList.astro';
+import { CATEGORIES, type CategoryKey } from '../../consts';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPosts } from '../../lib/posts';
+
+export function getStaticPaths() {
+	return Object.keys(CATEGORIES).map((category) => ({ params: { category } }));
+}
+
+const key = Astro.params.category as CategoryKey;
+const { label, description } = CATEGORIES[key];
+const posts = (await getPosts()).filter((p) => p.data.category === key);
+---
+
+<BaseLayout title={label} description={description}>
+	<div class="wrap">
+		<ListHeader title={label} description={description} />
+		<PostList posts={posts} emptyMessage={`${label} 카테고리의 첫 글을 기다리고 있습니다.`} />
+	</div>
+</BaseLayout>

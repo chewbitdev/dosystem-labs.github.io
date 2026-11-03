@@ -1,0 +1,49 @@
+---
+import PostList from '../components/PostList.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPosts } from '../lib/posts';
+
+const posts = await getPosts();
+---
+
+<BaseLayout title={SITE_TITLE} description={SITE_DESCRIPTION}>
+	<div class="wrap">
+		<section class="intro">
+			<h1>현장에서 부딪히며 배운 것들을 <br />기록하고 나눕니다.</h1>
+			<p>
+				금융과 플랫폼 서비스를 만드는 DO SYSTEM 개발자들의 멘토링과 스터디 기록입니다.
+			</p>
+		</section>
+		<PostList posts={posts} />
+	</div>
+</BaseLayout>
+
+<style>
+	.intro {
+		margin: 4.5rem 0 3.5rem;
+		padding: 0.25rem 0 0.25rem 1.5rem;
+		border-left: 4px solid var(--brand);
+	}
+	h1 {
+		font-size: clamp(1.85rem, 4.8vw, 3rem);
+		font-weight: 800;
+		line-height: 1.25;
+		letter-spacing: -0.04em;
+	}
+	p {
+		margin: 1rem 0 0;
+		max-width: 36rem;
+		color: var(--muted);
+		font-size: 1.05rem;
+	}
+	@media (max-width: 640px) {
+		.intro {
+			margin: 3rem 0 2.5rem;
+			padding-left: 1.1rem;
+		}
+		h1 br {
+			display: none;
+		}
+	}
+</style>

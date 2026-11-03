@@ -1,0 +1,14 @@
+{
+	"dosystem-labs": {
+		"name": "dosystem labs",
+		"role": "",
+		"bio": "dosystem 개발자들이 함께 운영하는 기술 블로그 계정입니다.",
+		"github": "dosystem-labs"
+	},
+	"inu-jeong": {
+		"name": "정인우",
+		"role": "차장",
+		"bio": "개발4팀",
+		"github": ""
+	}
+}

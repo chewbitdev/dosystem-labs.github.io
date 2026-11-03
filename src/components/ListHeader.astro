@@ -1,0 +1,27 @@
+---
+interface Props {
+	title: string;
+	description?: string;
+}
+const { title, description } = Astro.props;
+---
+
+<header class="list-head">
+	<h1>{title}</h1>
+	{description && <p>{description}</p>}
+</header>
+
+<style>
+	.list-head {
+		padding: 4.5rem 0 2.5rem;
+	}
+	h1 {
+		font-size: clamp(2rem, 5vw, 2.8rem);
+		letter-spacing: -0.035em;
+	}
+	p {
+		margin: 0.75rem 0 0;
+		color: var(--muted);
+		font-size: 1.05rem;
+	}
+</style>

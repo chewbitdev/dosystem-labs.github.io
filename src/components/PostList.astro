@@ -1,0 +1,142 @@
+---
+import { getEntry } from 'astro:content';
+import { CATEGORIES } from '../consts';
+import { readingMinutes, type Post } from '../lib/posts';
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+	posts: Post[];
+	emptyMessage?: string;
+}
+const { posts, emptyMessage = '아직 등록된 글이 없습니다.' } = Astro.props;
+
+const items = await Promise.all(
+	posts.map(async (post) => ({
+		post,
+		author: await getEntry(post.data.author),
+		minutes: readingMinutes(post.body),
+	})),
+);
+---
+
+{
+	items.length === 0 ? (
+		<p class="empty">{emptyMessage}</p>
+	) : (
+		<ol class="posts">
+			{items.map(({ post, author, minutes }) => (
+				<li>
+					<article>
+						<p class="date">
+							<FormattedDate date={post.data.pubDate} />
+						</p>
+						<div class="body">
+							<a class="category" href={`/category/${post.data.category}/`}>
+								{CATEGORIES[post.data.category].label}
+							</a>
+							<h2>
+								<a href={`/blog/${post.id}/`}>
+									{post.data.draft && <span class="draft">작성 중</span>}
+									{post.data.title}
+								</a>
+							</h2>
+							<p class="desc">{post.data.description}</p>
+							<p class="meta">
+								<span>{author?.data.name}</span>
+								<span>{minutes}분 분량</span>
+							</p>
+						</div>
+					</article>
+				</li>
+			))}
+		</ol>
+	)
+}
+
+<style>
+	.posts {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.posts li {
+		border-top: 1px solid var(--line);
+	}
+	.posts li:last-child {
+		border-bottom: 1px solid var(--line);
+	}
+	article {
+		display: grid;
+		grid-template-columns: 9.5rem 1fr;
+		gap: 2rem;
+		padding-block: 2rem;
+	}
+	.date {
+		margin: 0.2rem 0 0;
+		font-size: 0.9rem;
+		color: var(--muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.category {
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--brand);
+		text-decoration: none;
+	}
+	.category:hover {
+		text-decoration: underline;
+	}
+	h2 {
+		font-size: 1.45rem;
+		margin-top: 0.3rem;
+	}
+	h2 a {
+		text-decoration: none;
+	}
+	h2 a:hover {
+		color: var(--brand);
+	}
+	.draft {
+		display: inline-block;
+		margin-right: 0.5rem;
+		padding: 0 0.45rem;
+		font-size: 0.75rem;
+		vertical-align: middle;
+		border: 1px solid var(--muted);
+		border-radius: 4px;
+		color: var(--muted);
+	}
+	.desc {
+		margin: 0.5rem 0 0;
+		color: var(--ink-soft);
+	}
+	.meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		margin: 0.75rem 0 0;
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+	.empty {
+		padding: 4rem 0;
+		color: var(--muted);
+		border-top: 1px solid var(--line);
+		border-bottom: 1px solid var(--line);
+		text-align: center;
+	}
+	@media (max-width: 720px) {
+		article {
+			grid-template-columns: 1fr;
+			gap: 0.25rem;
+			padding-block: 1.6rem;
+		}
+		.date {
+			margin: 0 0 0.25rem;
+			font-size: 0.85rem;
+		}
+		h2 {
+			font-size: 1.25rem;
+		}
+	}
+</style>

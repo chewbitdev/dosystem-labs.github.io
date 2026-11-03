@@ -1,0 +1,55 @@
+---
+import { GISCUS } from '../consts';
+const enabled = Boolean(GISCUS.repoId && GISCUS.categoryId);
+---
+
+{
+	enabled ? (
+		<section class="comments" aria-label="댓글">
+			<h2>댓글</h2>
+			<script
+				src="https://giscus.app/client.js"
+				data-repo={GISCUS.repo}
+				data-repo-id={GISCUS.repoId}
+				data-category={GISCUS.category}
+				data-category-id={GISCUS.categoryId}
+				data-mapping="pathname"
+				data-strict="1"
+				data-reactions-enabled="1"
+				data-emit-metadata="0"
+				data-input-position="top"
+				data-theme="preferred_color_scheme"
+				data-lang="ko"
+				data-loading="lazy"
+				crossorigin="anonymous"
+				async
+				is:inline
+			/>
+		</section>
+	) : (
+		import.meta.env.DEV && (
+			<p class="setup">
+				댓글이 아직 설정되지 않았습니다. <code>src/consts.ts</code>의 GISCUS 항목에 repoId와 categoryId를 입력하세요.
+				(이 안내는 개발 서버에서만 보입니다.)
+			</p>
+		)
+	)
+}
+
+<style>
+	.comments {
+		margin-top: 3.5rem;
+	}
+	h2 {
+		font-size: 1.25rem;
+		margin-bottom: 1.25rem;
+	}
+	.setup {
+		margin-top: 3rem;
+		padding: 1rem 1.25rem;
+		border: 1px dashed var(--line);
+		border-radius: 8px;
+		font-size: 0.9rem;
+		color: var(--muted);
+	}
+</style>

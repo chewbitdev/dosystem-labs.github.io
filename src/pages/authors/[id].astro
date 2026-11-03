@@ -1,0 +1,31 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import AuthorCard from '../../components/AuthorCard.astro';
+import PostList from '../../components/PostList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPosts } from '../../lib/posts';
+
+export async function getStaticPaths() {
+	const authors = await getCollection('authors');
+	return authors.map((author) => ({ params: { id: author.id }, props: { author } }));
+}
+
+const { author } = Astro.props as { author: CollectionEntry<'authors'> };
+const posts = (await getPosts()).filter((p) => p.data.author.id === author.id);
+---
+
+<BaseLayout title={author.data.name} description={`${author.data.name}님이 쓴 글`}>
+	<div class="wrap">
+		<div class="head">
+			<AuthorCard author={author} />
+		</div>
+		<PostList posts={posts} />
+	</div>
+</BaseLayout>
+
+<style>
+	.head {
+		max-width: var(--measure);
+		padding: 4rem 0 3rem;
+	}
+</style>
