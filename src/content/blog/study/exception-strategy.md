@@ -34,20 +34,28 @@ public record ErrorResponse(String code, String message) { }
 
 ```java
 public enum ErrorCode {
+    ...
 
-    //회원가입 에러코드
-    DUPLICATE_ID(HttpStatus.CONFLICT, "이미 사용중인 아이디 입니다."),
-    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "비밀번호와 비밀번호 재확인이 일치하지 않습니다."),
-
-    //게시글 에러코드
-    POST_NOT_EXIST(HttpStatus.NOT_FOUND, "존재하지 않는 게시글입니다."),
-
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다." ),
+    
+    //작성자 불일치 에러코드
+    WRITER_MISMATCH(HttpStatus.FORBIDDEN, "작성자가 일치하지 않습니다."),
+    
     //요청 에러코드
     INVALID_JSON(HttpStatus.BAD_REQUEST, "형식이 올바르지 않습니다."),
     API_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 요청입니다."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 메서드입니다."),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "JSON 형식으로 요청해주세요."),
+
+    //인증 에러코드 (로그인 기능 전까지 X-Member-Id 헤더로 확인)
+    LOGIN_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
+
+    //DB제약조건 에러코드 (원인은 로그로 남기고 사용자에게는 일반 문구)
+    DUPLICATE_VALUE(HttpStatus.CONFLICT, "이미 사용 중인 값입니다."),
 
     //처리하지 못한 에러코드
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
+
     ...
 }
 ```
@@ -67,7 +75,7 @@ public enum ErrorCode {
 | `?page=0` (`@Min(1)` 검증 실패) | `HandlerMethodValidationException` | 400 + 검증 메시지 |
 | 없는 글에 댓글 작성 | `CustomException` | 404 `POST_NOT_EXIST` |
 
-`@RestControllerAdvice` 클래스에 예외별 처리기를 두고, 응답을 만드는 부분은 `toResponse` 메서드 하나로 모았습니다.
+`@RestControllerAdvice` 클래스에 예외별 처리기를 두고, 응답을 만드는 부분은 `toResponse` 메서드로 모았습니다. 대부분은 `ErrorCode`의 기본 메시지를 그대로 쓰고, `@Valid` 검증 실패처럼 메시지를 바꿔야 할 때만 메시지를 직접 넘기도록 두 가지로 나눴습니다.
 
 ```java
 //타입 변환 에러처리
@@ -76,6 +84,12 @@ public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismat
     return toResponse(ErrorCode.INVALID_INPUT);
 }
 
+//ErrorCode의 기본 메시지로 응답
+private ResponseEntity<ErrorResponse> toResponse(ErrorCode errorCode) {
+    return toResponse(errorCode, errorCode.getMessage());
+}
+
+//메시지를 직접 지정해서 응답 (검증 메시지 등)
 private ResponseEntity<ErrorResponse> toResponse(ErrorCode errorCode, String message) {
     return ResponseEntity.status(errorCode.getHttpStatus())
             .body(new ErrorResponse(errorCode.name(), message));
@@ -133,7 +147,12 @@ org.springframework.web.HttpMediaTypeNotAcceptableException: No acceptable repre
 | `Content-Type: text/plain`으로 회원가입 | 500 `INTERNAL_ERROR` | 415 `UNSUPPORTED_MEDIA_TYPE` |
 | `Accept: application/xml`로 목록 조회 | 406 + `ERROR` 로그 | 406, 로그 없음 |
 
-세 예외는 원래 Spring이 400, 415, 406으로 응답하던 예외입니다. `Exception` 처리기를 추가하면서 별도 처리기가 없던 이 예외들이 모두 500으로 바뀌었습니다. 헤더 누락은 처리기를 추가하기 전에는 400이었습니다.
+세 예외는 원래 Spring이 400, 415, 406으로 응답하던 예외입니다. `Exception` 처리기를 추가하면서 별도 처리기가 없던 이 예외들이 모두 이 처리기로 들어왔고, 결과는 두 가지로 나뉘었습니다.
+
+- 헤더 누락과 `Content-Type` 오류는 500 `INTERNAL_ERROR`로 바뀌었습니다. 헤더 누락은 처리기를 추가하기 전에는 400이었습니다.
+- `Accept` 오류는 응답은 406 그대로였지만 `ERROR` 로그가 남았습니다.
+
+`Accept` 오류만 406으로 남은 이유는 응답 본문을 쓸 수 없었기 때문입니다. `Exception` 처리기는 `ErrorResponse`를 반환하지만, 클라이언트가 XML만 받겠다고 요청했기 때문에 JSON 본문을 쓸 수 없습니다. 처리기의 응답이 실패하면 Spring이 원래 예외를 다시 처리해서 406으로 응답합니다. 상태 코드는 맞게 나가지만 처리기에서 `log.error`가 이미 실행된 뒤라 `ERROR` 로그가 남습니다.
 
 사용자 입력 문제가 500으로 나가면 프론트는 서버 오류로 안내하게 되고, `ERROR` 로그에 서버 문제가 아닌 기록이 섞입니다. 세 예외에 처리기를 추가했습니다.
 
@@ -142,6 +161,16 @@ org.springframework.web.HttpMediaTypeNotAcceptableException: No acceptable repre
 @ExceptionHandler(MissingRequestHeaderException.class)
 public ResponseEntity<ErrorResponse> handleMissingHeader(MissingRequestHeaderException e) {
     return toResponse(ErrorCode.LOGIN_REQUIRED);
+}
+```
+
+406 처리기는 다른 처리기와 다르게 본문 없이 응답합니다. 클라이언트가 받을 수 있는 형식이 JSON이 아니므로 `ErrorResponse`를 본문에 넣으면 같은 이유로 다시 실패합니다. 그래서 `ErrorCode`를 쓰지 않고 상태 코드만 보냅니다.
+
+```java
+//응답 형식(Accept) 오류 처리 (JSON 본문을 쓸 수 없으므로 본문 없이 응답)
+@ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+public ResponseEntity<Void> handleNotAcceptable(HttpMediaTypeNotAcceptableException e) {
+    return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
 }
 ```
 
